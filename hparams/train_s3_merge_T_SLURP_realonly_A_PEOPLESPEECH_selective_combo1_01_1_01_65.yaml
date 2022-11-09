@@ -1,0 +1,413 @@
+# ############################################################################
+# Model: Direct SLU
+# Encoder: Pre-trained wav2vec2 -> LSTM
+# Decoder: GRU + beamsearch
+# Tokens: BPE with unigram
+# losses: NLL
+# Training: SLURP
+# Authors:  Loren Lugosch, Mirco Ravanelli 2020 Boumadane Abdelmoumene, AbdelWahab Heba, Yingzhi Wang 2021
+# For more wav2vec2/HuBERT results, please see https://arxiv.org/pdf/2111.02735.pdf
+# ############################################################################
+
+# Seed needs to be set at top of yaml, before objects with parameters are made
+project_folder: /home/jfhe/Documents/MountHe/jfhe/projects/speechbrain
+peoplespeech_data_folder: !ref <project_folder>/datasets/peoplespeech # !PLACEHOLDER # e,g./path/to/LibriSpeech
+slurp_data_folder: !ref <project_folder>/datasets/SLURP
+
+small_set: False
+data_name: "slurp"
+mid_syn_label_file: "inference_syn_label.jsonl"
+
+seed: 198628
+
+refer_seed: 19862
+
+__set_seed: !apply:torch.manual_seed [!ref <seed>]
+freeze_folder: !ref processed_data/<data_name>
+output_folder: !ref results/<seed>/<data_name>
+save_folder: !ref <output_folder>/save
+train_log: !ref <output_folder>/train_log.txt
+
+# Data files
+# The SLURP dataset will be automatically downloaded in the specified data_folder
+data_folder: !ref <project_folder>/datasets/SLURP # !<PLACEHOLDER> # e.g, /localscratch/SLURP
+data_folder_rirs: !ref <data_folder>
+train_splits: ["train_real"]
+csv_train: !ref <freeze_folder>/train-type=direct.csv
+csv_valid: !ref <freeze_folder>/devel-type=direct.csv
+csv_test: !ref <freeze_folder>/test-type=direct.csv
+tokenizer_file: speechbrain/SLU-direct-SLURP-hubert-enc
+skip_prep: True
+operate_divide_csv_train: False # should be fixed as False in all baselines
+divide_csv_train: True
+split_ratio: "0.45 0.9 1.0" # "None"
+invs_csv_train: !ref <freeze_folder>/invs-train-type=direct.csv
+vs_csv_train: !ref <freeze_folder>/vs-train-type=direct.csv
+fine_turn_csv: !ref <freeze_folder>/fine-tune-type=direct.csv  # only useful when split_ratio != "None"
+
+
+
+# URL for the wav2vec2 model, you can change to benchmark diffrenet models
+wav2vec2_hub: "facebook/hubert-base-ls960"
+
+# Training parameters
+number_of_epochs: 35
+batch_size: 8 # 8 # 6
+lr: 0.0003
+lr_wav2vec2: 0.00001
+token_type: unigram # ["unigram", "bpe", "char"]
+sorting: random
+ckpt_interval_minutes: 15 # save checkpoint every N min
+
+#freeze all wav2vec2
+freeze_wav2vec2: False
+
+#set to true to freeze the CONV part of the wav2vec2 model # might be not useful
+freeze_wav2vec2_conv: True
+
+# Model parameters
+sample_rate: 16000
+emb_size: 128
+dec_neurons: 512
+output_neurons: 58 # index(eos/bos) = 0
+encoder_dim: 768
+
+# Decoding parameters
+bos_index: 0
+eos_index: 0
+min_decode_ratio: 0.0
+max_decode_ratio: 10.0
+slu_beam_size: 80
+eos_threshold: 1.5
+temperature: 1.25
+
+dataloader_opts:
+    batch_size: !ref <batch_size>
+    shuffle: True
+
+epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
+    limit: !ref <number_of_epochs>
+
+# Models
+wav2vec2: !new:speechbrain.lobes.models.huggingface_wav2vec.HuggingFaceWav2Vec2
+    source: !ref <wav2vec2_hub>
+    output_norm: True
+    freeze: !ref <freeze_wav2vec2>
+    save_path: !ref <save_folder>/wav2vec2_checkpoint
+
+output_emb: !new:speechbrain.nnet.embedding.Embedding
+    num_embeddings: !ref <output_neurons>
+    embedding_dim: !ref <emb_size>
+
+dec: !new:speechbrain.nnet.RNN.AttentionalRNNDecoder
+    enc_dim: !ref <encoder_dim>
+    input_size: !ref <emb_size>
+    rnn_type: lstm
+    attn_type: content
+    hidden_size: !ref <dec_neurons>
+    attn_dim: 512
+    num_layers: 3
+    scaling: 1.0
+    dropout: 0.0
+
+seq_lin: !new:speechbrain.nnet.linear.Linear
+    input_size: !ref <dec_neurons>
+    n_neurons: !ref <output_neurons>
+
+augmentation: !new:speechbrain.lobes.augment.TimeDomainSpecAugment
+    sample_rate: !ref <sample_rate>
+    speeds: [95, 100, 105]
+
+
+### below is the modules for cross-modal selective net, please make sure it is written before "modules" & "model"
+cm_sel_net: !new:models.selectivenet.SpeechBrain_CrossModalSelectiveNet
+    audio_fea_dim: !ref <encoder_dim>
+    text_fea_dim: 256 # it should be the same to the <encoder_dim> in the train_NLU*.yaml, where * is
+    com_fea_dim: 200
+    single_sample_per_batch: True # in slue, this might be True; other dataset should be False
+    dropout_rate: 0.1
+### above is the modules for cross-modal selective net, please make sure it is written before "modules" & "model"
+
+
+modules:
+    wav2vec2: !ref <wav2vec2>
+    output_emb: !ref <output_emb>
+    dec: !ref <dec>
+    seq_lin: !ref <seq_lin>
+    cm_sel_net: !ref <cm_sel_net> # extra added for initilization and foward
+
+model: !new:torch.nn.ModuleList
+    - [!ref <output_emb>,
+       !ref <dec>, !ref <seq_lin>,
+    !ref <cm_sel_net>] # extra added for optimization
+
+#modules:
+#    wav2vec2: !ref <wav2vec2>
+#    output_emb: !ref <output_emb>
+#    dec: !ref <dec>
+#    seq_lin: !ref <seq_lin>
+#
+#model: !new:torch.nn.ModuleList
+#    - [!ref <output_emb>,
+#       !ref <dec>, !ref <seq_lin>]
+
+tokenizer: !new:sentencepiece.SentencePieceProcessor
+asr_tokenizer: !new:sentencepiece.SentencePieceProcessor  # extra added, same to the asr_tokenizer in the NLU training, used for transcripts
+asr_tokenizer_file: https://www.dropbox.com/s/o7gnouwdoqchotj/1000_unigram.model?dl=1
+
+pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
+    collect_in: !ref <save_folder>/SLURP_tokenizer
+    loadables:
+        tokenizer: !ref <tokenizer>
+        asr_tokenizer: !ref <asr_tokenizer>
+    paths:
+        tokenizer: !ref <tokenizer_file>/tokenizer_58_unigram.model
+        asr_tokenizer: !ref <asr_tokenizer_file>
+
+beam_searcher: !new:speechbrain.decoders.S2SRNNBeamSearcher
+    embedding: !ref <output_emb>
+    decoder: !ref <dec>
+    linear: !ref <seq_lin>
+    bos_index: !ref <bos_index>
+    eos_index: !ref <eos_index>
+    min_decode_ratio: !ref <min_decode_ratio>
+    max_decode_ratio: !ref <max_decode_ratio>
+    beam_size: !ref <slu_beam_size>
+    eos_threshold: !ref <eos_threshold>
+    temperature: !ref <temperature>
+    using_max_attn_shift: False
+    max_attn_shift: 30
+    coverage_penalty: 0.
+
+opt_class: !name:torch.optim.Adam
+    lr: !ref <lr>
+
+wav2vec2_opt_class: !name:torch.optim.Adam
+    lr: !ref <lr_wav2vec2>
+
+lr_annealing: !new:speechbrain.nnet.schedulers.NewBobScheduler
+    initial_value: !ref <lr>
+    improvement_threshold: 0.0025
+    annealing_factor: 0.8
+    patient: 0
+
+lr_annealing_wav2vec2: !new:speechbrain.nnet.schedulers.NewBobScheduler
+    initial_value: !ref <lr_wav2vec2>
+    improvement_threshold: 0.0025
+    annealing_factor: 0.9
+
+checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
+    checkpoints_dir: !ref <save_folder>/direct
+    recoverables:
+        model: !ref <model>
+        wav2vec2: !ref <wav2vec2>
+        scheduler: !ref <lr_annealing>
+        lr_annealing_wav2vec2: !ref <lr_annealing_wav2vec2>
+        counter: !ref <epoch_counter>
+
+log_softmax: !new:speechbrain.nnet.activations.Softmax
+    apply_log: True
+
+seq_cost: !name:speechbrain.nnet.losses.nll_loss
+    label_smoothing: 0.1
+
+train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
+    save_file: !ref <train_log>
+
+error_rate_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
+
+cer_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
+    split_tokens: True
+
+
+## below is for auxiliary data
+# ############################################################################
+# Model: E2E ASR with attention-based ASR
+# Encoder: CRDNN model
+# Decoder: GRU + beamsearch + RNNLM
+# Tokens: BPE with unigram
+# losses: CTC+ NLL
+# Training: Librispeech 960h
+# Authors:  Ju-Chieh Chou, Mirco Ravanelli, Abdel Heba, Peter Plantinga,
+# Samuele Cornell 2020
+# ############################################################################
+
+# This yaml file is revised based on part of "recipes/LibriSpeech/seq2seq/train_BPE_1000.yaml"
+aux_data_name: "peoplespeech"
+
+# Seed needs to be set at top of yaml, before objects with parameters
+aux_output_folder: !ref results/aux_output/<seed>/<aux_data_name>
+aux_wer_file: !ref <output_folder>/wer.txt
+aux_save_folder: !ref <output_folder>/save
+aux_train_log: !ref <output_folder>/train_log.txt
+
+# Language model (LM) pretraining
+# NB: To avoid mismatch, the speech recognizer must be trained with the same
+# tokenizer used for LM training. Here, we download everything from the
+# speechbrain HuggingFace repository. However, a local path pointing to a
+# directory containing the lm.ckpt and tokenizer.ckpt may also be specified
+# instead. E.g if you want to use your own LM / tokenizer.
+aux_pretrained_lm_tokenizer_path: speechbrain/asr-crdnn-rnnlm-librispeech
+
+# Data files
+aux_data_folder: !ref <project_folder>/datasets/peoplespeech # !PLACEHOLDER # e,g./path/to/LibriSpeech
+# noise/ris dataset will automatically be downloaded
+aux_data_folder_rirs: !ref <aux_data_folder> # where to store noisy data for augment (change it if needed)
+aux_freeze_folder: !ref processed_data/<aux_data_name>
+
+#aux_train_splits: ["train-clean-100", "train-clean-360", "train-other-500"]
+#aux_dev_splits: ["dev-clean"]
+#aux_test_splits: ["test-clean", "test-other"]
+aux_skip_prep: False
+aux_ckpt_interval_minutes: 15 # save checkpoint every N min
+aux_csv_train: !ref <aux_freeze_folder>/peoplespeech_train.csv
+aux_csv_valid: !ref <aux_freeze_folder>/peoplespeech_dev.csv
+aux_csv_test: !ref <aux_freeze_folder>/peoplespeech_test.csv
+
+# Training parameters
+aux_batch_size: 8
+aux_sorting: random
+aux_dynamic_batching: False
+
+# dynamic batching parameters, if used
+aux_dynamic_batch_sampler:
+   feats_hop_size: 0.01
+   max_batch_len: 20000 # in terms of frames
+   shuffle_ex: True
+   batch_ordering: random
+   num_buckets: 20
+
+# Feature parameters
+aux_sample_rate: 16000
+aux_n_fft: 400
+aux_n_mels: 40
+
+# Dataloader options
+aux_train_dataloader_opts:
+   batch_size: !ref <aux_batch_size>
+
+aux_valid_dataloader_opts:
+   batch_size: !ref <aux_batch_size>
+
+aux_test_dataloader_opts:
+   batch_size: !ref <aux_batch_size>
+
+# Model parameters
+aux_output_neurons: 1000  # Number of tokens (same as LM)
+aux_emb_size: 128
+
+# This is the RNNLM that is used according to the Huggingface repository
+# NB: It has to match the pre-trained RNNLM!!
+aux_lm_model: !new:speechbrain.lobes.models.RNNLM.RNNLM
+   output_neurons: !ref <aux_output_neurons>
+   embedding_dim: !ref <aux_emb_size>
+   activation: !name:torch.nn.LeakyReLU
+   dropout: 0.0
+   rnn_layers: 2
+   rnn_neurons: 2048
+   dnn_blocks: 1
+   dnn_neurons: 512
+   return_hidden: True  # For inference
+
+aux_tokenizer: !new:sentencepiece.SentencePieceProcessor
+
+
+### text filter of T1+A related
+text_filter_type: 'text_len'  # 'word2vec' 'text_len'
+cal_filter_res_by_text_similary: False # need to set with attention, effective for all types of ini_filter
+
+## text_len related:
+limited_text_len: 16
+
+### word2vector related items
+word2vec_name: "glove"
+word2vec_pretrained_path: !ref <project_folder>/pretrained_models
+recalculate_word2vec: False # need attention to set correctly
+aux_recalculate_word2vec: False # need attention to set correctly
+
+
+### cluster related item
+recalculate_cluster_mean: False
+n_clusters: 20
+word2vec_cluster_model:
+#  name: "dbscan"
+#  min_samples: 200
+#  eps: 0.05
+#  metric: 'cosine'
+  name: "kmeans"
+  n_clusters: !ref <n_clusters>
+  n_init: 10
+
+cluster_res_path: !ref <freeze_folder>/cluster_res_<n_clusters>.npy
+
+### select aux samples items
+filter_res_by_text_similary_dir: !ref <output_folder>/<data_name>_<aux_data_name>
+#filter_res_by_text_similary_path: !ref <filter_res_by_text_similary_dir>/filter_res_by_text_similary.npy
+ini_text_filter_res: !ref <filter_res_by_text_similary_dir>/filter_res_by_<text_filter_type>.npy
+filter_by_sim:
+  threshold: 0.05 # even it is cosine similarity, it is smaller to be better due to sklearn returns (1 - cosine)
+
+filter_by_label_ratio: False
+#filter_res_by_label_ratio_path: !ref <output_folder>/filter_res_by_label_ratio.npy
+
+#aux_divide_csv_train: False
+recal_filter_csv: True
+seleted_aux_csv_wo: !ref <filter_res_by_text_similary_dir>/selected_aux_train_wo_syn_label.csv
+
+
+### merge aux samples related items (T1 + A)
+merge_tar_aux: True # need to set with attention
+#filter_res_by_text_similary_dir: !ref <output_folder>/<data_name>_<aux_data_name>
+merge_save_path: !ref <filter_res_by_text_similary_dir>/<data_name>_<aux_data_name>_merge_ini.csv
+merge_ways: "default"
+
+seleted_aux_csv_wi: !ref <filter_res_by_text_similary_dir>/selected_aux_train_wi_syn_label.csv # will be divided into 3 parts
+tr_sel_aux_csv_wi: !ref <filter_res_by_text_similary_dir>/tr_sel_aux_wi_syn_label.csv
+dev_sel_aux_csv_wi: !ref <filter_res_by_text_similary_dir>/dev_sel_aux_wi_syn_label.csv
+te_sel_aux_csv_wi: !ref <filter_res_by_text_similary_dir>/te_sel_aux_wi_syn_label.csv
+sel_aux_csv_wi_ratio: "0.8 0.9 1.0"
+
+# for NLU training division
+tr_vs_csv_train: !ref <output_folder>/tr_vs_csv_train.csv
+dev_vs_csv_train: !ref <output_folder>/dev_vs_csv_train.csv
+te_vs_csv_train: !ref <output_folder>/te_vs_csv_train.csv
+
+
+### cal syn label related
+cal_syn_label: False
+eval_nlu: False
+
+### train s3
+retrain_s3: True # set with attention
+
+### test S3
+cal_lc_infer: False
+cal_gb_infer: True
+lc_infer_res: lc_inference.jsonl
+gb_infer_res: gb_inference.jsonl
+
+### whether use bert enc in the NLU model
+use_nlu_bert_enc: False
+
+### draw diagrams
+draw_img: False
+### 3-view embedding diversity balance
+multi_view_balance: False   # if set 'multi_view_balance' to true, need to set 'draw_img' as true
+n_clusters_multi_view: 10
+balance_sf_res_path: !ref <filter_res_by_text_similary_dir>/multi_view_balanced_selected_aux_train_wo_syn_label_<n_clusters_multi_view>.npy
+multi_view_cluster_model:
+#  name: "dbscan"
+#  min_samples: 200
+#  eps: 0.05
+#  metric: 'cosine'
+  name: "kmeans"
+  n_clusters: !ref <n_clusters_multi_view>
+  n_init: 10
+
+#### train the selective net
+use_selectnet: True
+selnet_sel_cm_weight: 0.1
+selnet_aux_cm_weight: 1.0
+selnet_sel_penality_weight: 0.1
+selnet_sel_coverage: 0.65 # range [0, 1]
+

@@ -203,9 +203,6 @@ class NLU(sb.Brain):
             with open(self.hparams.wer_file, "w") as w:
                 self.wer_metric.write_stats(w)
 
-    # def set_hparams(self, main_hparams, nlu_hparams=None):
-    #     self.hparams = main_hparams
-    #     self.hparams = nlu_hparams
 
     def infer_forward(self, batch):
         """Computations from input to semantic outputs"""
@@ -252,11 +249,6 @@ class NLU(sb.Brain):
         ) as writer:
             for i in range(len(predicted_semantics)):
                 try:
-                    # dict = ast.literal_eval(
-                    #     " ".join(predicted_semantics[i]).replace(
-                    #         "|", ","
-                    #     )
-                    # )
                     dict = ast.literal_eval(" ".join(predicted_semantics[i]).replace("|", ","))
                 except SyntaxError:  # need this if the output is not a valid dictionary
                     dict = {
@@ -265,22 +257,18 @@ class NLU(sb.Brain):
                         "entities": [],
                     }
 
-                # below might not be applicable to slue
                 if not (type(dict).__name__ == 'dict'):
                     dict = {
                         "scenario": "none",
                         "action": "none",
                         "entities": [],
                     }
-                # above might not be applicable to slue
+
 
 
                 if id_to_file == None:
                     dict["ID"] = ids[i]
                 else:
-                    # print(list(id_to_file.keys())[0:10])
-                    # print(ids[i])
-                    # print(id_to_file[str(ids[i])])
                     dict["file"] = id_to_file[str(ids[i])]
                 writer.write(dict)
 
@@ -300,20 +288,8 @@ class NLU(sb.Brain):
             os.path.join(save_path, save_file), mode="a"
         ) as writer:
             for i in range(len(predicted_semantics)):
-                # try:
-                    # dict = ast.literal_eval(
-                    #     " ".join(predicted_semantics[i]).replace(
-                    #         "|", ","
-                    #     )
-                    # )
                 dict = {}
                 dict['entities'] = " ".join(predicted_semantics[i]).replace("|", ",")
-                # except SyntaxError:  # need this if the output is not a valid dictionary
-                #     dict = {
-                #         "scenario": "none",
-                #         "action": "none",
-                #         "entities": [],
-                #     }
                 if id_to_file == None:
                     dict["ID"] = ids[i]
                 else:
@@ -395,10 +371,6 @@ class NLU(sb.Brain):
                 if self.debug and self.step == self.debug_batches:
                     break
 
-            # Only run evaluation "on_stage_end" on main process
-            # run_on_main(
-            #     self.on_stage_end, args=[Stage.TEST, avg_test_loss, None]
-            # )
         self.step = 0
         # return avg_test_loss
 
@@ -429,16 +401,6 @@ class NLU(sb.Brain):
                         embedded_transcripts = self.hparams.input_emb(transcript_tokens)
                         transcript_encoder_out = self.hparams.slu_enc(embedded_transcripts)
 
-                    # ### for NLU & transcript embedding
-                    # transcript_tokens = batch['transcript_tokens']
-                    # transcript_tokens = transcript_tokens.unsqueeze(0).cuda()
-                    #
-                    # embedded_transcripts = self.hparams.input_emb(transcript_tokens)
-                    # transcript_encoder_out = self.hparams.slu_enc(embedded_transcripts)  # called as slu_enc, but it actually is the nlu enc
-
-
-
-                    # need add condition to judge whether -1 or 0
                     transcript_fea = transcript_encoder_out[:, -1, :]  # it is LSTM, so it is -1
                     res[id_str] = transcript_fea.detach().cpu()
         return res

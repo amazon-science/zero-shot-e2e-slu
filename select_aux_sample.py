@@ -1,23 +1,11 @@
 import json
-import copy
-import spacy
 import numpy as np
-import torch
 from sklearn.cluster import DBSCAN, KMeans
 from scipy.spatial import distance
 import os
 
 def cal_cluster(hparams, input_file_name, cluster_para, fea_keyword, id_keyword, cluster_save_path):
-    # ouputs are as below
-    # label_array: the cluster id for each sample
-    # rel_score: the cosine distance of each sample to each cluster
-    # represent_vec_best: the index of the sample that is the most close to cluster center
-    # each_cluster_index: all indexes of each cluster
-    # sample_dataset_ids: a list projects the dataset sample_id into the position index of the lists(previous four outputs)
-    # cluster_mean_list: a list of cluster_center_vec
 
-
-    # input_file_name, cluster_para = hparams['word2vec_fea_file'], hparams['word2vec_cluster_model']
     if cluster_para['name'] == 'dbscan':
         cluster_model = DBSCAN(eps=cluster_para['eps'], min_samples=cluster_para['min_samples'], metric=cluster_para['metric'])
     elif cluster_para['name'] == 'kmeans':
@@ -62,9 +50,7 @@ def cal_cluster(hparams, input_file_name, cluster_para, fea_keyword, id_keyword,
         print('The cluster is failed, please reset the cluster parameters!')
         raise ValueError
 
-    ## process cluster results
-    # rel_score = np.ones((data_num,)) * -1
-    # represent_vec_best = np.ones((len(label_list),), np.int32) * -1
+
     each_cluster_index = []
     cluster_mean_list = []
     for i in label_list:
@@ -73,17 +59,9 @@ def cal_cluster(hparams, input_file_name, cluster_para, fea_keyword, id_keyword,
         mid_vectors = sample_sentence_arrays[mid_loc]
         mid_cluster_mean = mid_vectors.mean(axis=0)
         cluster_mean_list.append(mid_cluster_mean)
-        # best_score = float('-inf')
-        # mid_best_vec_index = -99
+
         mid_cluster_index = mid_loc
-        # mid_cluster_index = []
-        # for j in mid_loc:
-            # rel_score[j] = distance.cosine(mid_cluster_mean, sample_sentence_arrays[j])
-            # mid_cluster_index.append(j)
-            # if rel_score[j] > best_score:
-            #     best_score = rel_score[j]
-            #     mid_best_vec_index = j
-        # represent_vec_best[i] = mid_best_vec_index
+
         each_cluster_index.append(mid_cluster_index)
         # rel_score[mid_loc] = distance.cosine(mid_cluster_mean, sample_sentence_arrays[mid_loc])
     cluster_mean_array = np.array(cluster_mean_list)
@@ -92,10 +70,7 @@ def cal_cluster(hparams, input_file_name, cluster_para, fea_keyword, id_keyword,
     cluster_res.append(each_cluster_index)
     cluster_res.append(sample_dataset_ids)
     cluster_res.append(cluster_mean_array)
-    # cluster_res['label_array'] = label_array
-    # cluster_res['each_cluster_index'] = each_cluster_index
-    # cluster_res['sample_dataset_ids'] = sample_dataset_ids
-    # cluster_res['cluster_mean_array'] = cluster_mean_array
+
     np.save(cluster_save_path, cluster_res)
     print(f'save cluster_res successfully to ', cluster_save_path)
     return (
@@ -115,51 +90,7 @@ def cal_ele_ratio(input_list):
     ratio_list = list(len_array * 1.0 / sum_len_array)
     return ratio_list
 
-# def filter_aux_samples_copy(hparams, cluster_mean_array, mode='default'):
-#     if mode == 'default':
-#         input_file_name = hparams['aux_word2vec_fea_file']
-#     elif mode == 'debug':
-#         input_file_name = hparams['word2vec_fea_file']
-#     else:
-#         print("the mode in filter_aux_samples is wrong")
-#         raise ValueError
-#     # read json file & filter by text similarity
-#     num_cluster = cluster_mean_array.shape[0]
-#     ini_filter_res = {}
-#     for i in range(num_cluster):
-#         ini_filter_res[str(i)] = {}
-#         ini_filter_res[str(i)]['ids'] = []
-#         ini_filter_res[str(i)]['scores'] = []
-#     filter_sample_sentence_ids = []
-#     filter_sample_sentence_scores = []
-#     with open(input_file_name, encoding='utf-8') as f:
-#         sample_lines = f.readlines()
-#         total_aux_samples = len(sample_lines)
-#         jsq = 0
-#         for sample_line in sample_lines:
-#             jsq += 1
-#             if mode == 'debug':
-#                 if jsq % 1000 == 0:
-#                     print(f'finish filter by text similarity of {jsq}/{total_aux_samples}')
-#                 if jsq == 5000:
-#                     break
-#             if jsq % 10000 == 0:
-#                 print(f'finish filter by text similarity of {jsq}/{total_aux_samples}')
-#             sample = json.loads(sample_line)
-#             for i in range(num_cluster):
-#                 cluster_mean = cluster_mean_array[i]
-#                 mid_distance = distance.cosine(cluster_mean, sample[hparams["word2vec_name"] + '_mean_fea_vec'])
-#                 if mid_distance <= hparams['filter_by_sim']['threshold']:
-#                     ini_filter_res[str(i)]['ids'].append(sample['id'])
-#                     ini_filter_res[str(i)]['scores'].append(mid_distance)
-#                     break
-#                 ### add transform distance at here
-#     if mode == "default":
-#         if not os.path.isdir(hparams['filter_res_by_text_similary_dir']):
-#             os.makedirs(hparams['filter_res_by_text_similary_dir'])
-#         np.save(hparams['ini_text_filter_res'], ini_filter_res)
-#     print("initial_filter_res has been finished")
-#     return ini_filter_res
+
 
 def filter_aux_samples(hparams, cluster_mean_array, aud_cluster_mean_array=None, mode='default'):
     if mode == 'default':
@@ -196,8 +127,7 @@ def filter_aux_samples(hparams, cluster_mean_array, aud_cluster_mean_array=None,
         ini_filter_res[str(i)] = {}
         ini_filter_res[str(i)]['ids'] = []
         ini_filter_res[str(i)]['scores'] = []
-        # if 'gaulabel' in hparams['text_filter_type']:
-        #     ini_filter_res[str(i)]['text2sem_dis'] = []
+
 
     if 'gaulabel' in hparams['text_filter_type']:
         # check the statistics of semantic2vec_fea_file

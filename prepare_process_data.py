@@ -28,19 +28,7 @@ def prepare_data(hparams, data_name, data_role='tar', split=None):
             },
         )
 
-        # else:
-        #     from data_prepare.slurp_prepare import prepare_SLURP_ratio  # noqa
-        #     run_on_main(
-        #         prepare_SLURP_ratio,
-        #         kwargs={
-        #             "data_folder": hparams[role_prefix + "data_folder"],
-        #             "save_folder": hparams[role_prefix + "freeze_folder"],
-        #             "train_splits": hparams[role_prefix + "train_splits"],
-        #             "slu_type": "direct",
-        #             "skip_prep": hparams[role_prefix + "skip_prep"],
-        #             "split_ratio": hparams[role_prefix + "split_ratio"]
-        #         },
-        #     )
+
 
 
     elif data_name == 'slue-voxpopuli':
@@ -100,13 +88,7 @@ def prepare_data(hparams, data_name, data_role='tar', split=None):
         )
 
 def process_data(hparams, data_name, data_role='tar', split_ratio="None"):
-    # if data_role == 'tar':
-    #     role_prefix = ""
-    # elif data_role == 'aux':
-    #     role_prefix = "aux_"
-    # else:
-    #     print('data_role is invalid!')
-    #     raise ValueError
+
     if data_name == 'slurp':
         from data_process import slurp_process
         # here we create the datasets objects as well as tokenization and encoding
@@ -167,8 +149,7 @@ def process_data(hparams, data_name, data_role='tar', split_ratio="None"):
         else:
             (train_set, valid_set, test_set, tokenizer) = slue_voxpopuli_full_process.dataio_prepare(hparams, data_role)
             return (train_set, valid_set, test_set, tokenizer)
-        # (train_set, valid_set, test_set, tokenizer) = slue_voxpopuli_process.dataio_prepare(hparams, data_role)
-        # return (train_set, valid_set, test_set, tokenizer)
+
 
     elif data_name == 'peoplespeech':
         from data_process import peoplespeech_process
@@ -178,9 +159,7 @@ def process_data(hparams, data_name, data_role='tar', split_ratio="None"):
         return (train_set, valid_set, test_set, tokenizer)
 
 def split_csv_ratio(source_name, target_name1, target_name2, target_name3, split_ratio, remain_train_ratio=100, small_set=False):
-    # if os.path.exists(target_name1) and os.path.exists(target_name2) and os.path.exists(target_name3):
-    #     print(f'subsets {target_name1}, {target_name2} and {target_name3} are already existing.')
-    #     return
+
 
     source_df = pd.read_csv(source_name, header=0, sep=',')
 
@@ -226,12 +205,7 @@ def filter_csv(file_name, remained_id_list, seleted_aux_csv_path):
     source_df = pd.read_csv(file_name, header=0, sep=',')
 
     res_df = source_df.loc[source_df['ID'].isin(remained_id_list)]
-    # if len(remained_id_list) != 0 and res_df.shape[0]==0:
-    #     remained_id_list = [int(x) for x in remained_id_list]
-    # res_df = source_df.loc[source_df['ID'].isin(remained_id_list)]
-    # if len(remained_id_list) != 0 and res_df.shape[0] == 0:
-    #     print('the size of remained id list is invalid')
-    #     raise ValueError
+
     assert res_df.shape[0] == len(remained_id_list)
 
     res_df.to_csv(seleted_aux_csv_path, index=False)
@@ -386,8 +360,7 @@ def str_list_find_one_key(str_list, key1):
     return None
 
 def gen_tts_id2audio_dict(tts_split_foder, tts_audio_folder, save_path=None):
-    # return a dict that
-    # projects slurp id (content in the split folder; row number is only an index, not a id) to a audio path in the tts_audio_folder
+
     res = {}
 
 
@@ -430,13 +403,7 @@ def gen_tts_id2audio_dict(tts_split_foder, tts_audio_folder, save_path=None):
                 res[sample_sens[jsq][0:-1]] = [audio_folder]
             else:
                 res[sample_sens[jsq][0:-1]].append(audio_folder)
-            # res[sample_id] = {
-            #     'tts_wav': audio_folder,
-            #     'transcript': sample_sens[jsq][0:-1]
-            # }
 
-            # if audio_folder != None:
-            #     print(sample_id, 'is', audio_folder)
             jsq += 1
 
     np.save(save_path, res)
@@ -496,8 +463,6 @@ def assign_abstudy_folder(
     shutil.copytree(refer_res_folder_path, main_res_folder_path)
     print(f'copy {refer_res_folder_path} to {main_res_folder_path} finished!' )
 
-    # if len(os.listdir(remove_pretrained_model_folder)) != 0:
-    #     raise ValueError(f'There is a pretrained model in {remove_pretrained_model_folder}, please change "retrain_s3" value or remove the content under the folder')
 
     shutil.rmtree(remove_pretrained_model_folder)
     print(f'remove and rebuild {remove_pretrained_model_folder} finished!')

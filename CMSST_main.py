@@ -1,3 +1,8 @@
+######
+# This CMSST framework is revised on https://github.com/speechbrain/speechbrain/blob/develop/recipes/SLURP/direct/train_with_wav2vec2.py
+######
+
+
 import sys
 import torch
 import speechbrain as sb
@@ -8,7 +13,6 @@ from data_process import slurp_process, merge_process, slue_voxpopuli_process
 import prepare_process_data
 import prepare_aux_text_embedding
 import os
-# import select_aux_sample
 import numpy as np
 from text_filter import word2vec_filter, text_len_filter
 from models import NLU_text2sem, direct_audio2sem, sel_direct_audio2sem
@@ -30,7 +34,7 @@ if __name__ == "__main__":
     ### construct ablation study env
     # This is used for copying same data folder (<seed>) from another experiment result fold (if <refer_seed> is not None)
     # If the trained model is not deleted in the copied data folder, below code will prevent the code from continuing
-    # You should make sure the trained model ('<save_folder>/direct/') is deleted, if you set <refer_seed> not None.
+    # You should make sure the trained model ('<save_folder>/direct/') is deleted, if you set <refer_seed> as not None.
     if 'refer_seed' in hparams.keys() and hparams['refer_seed'] != None and hparams['retrain_s3'] == True:
         results_folder = os.path.join(os.getcwd(), 'results')
         prepare_process_data.assign_abstudy_folder(
@@ -84,7 +88,6 @@ if __name__ == "__main__":
         # vs_train_data -> T2 (D^{t}_{T->M}), invs_train_data -> T1 (D^{t}_{A->T} or D^{t}_{A->S}), fine_tune_data -> T3 (for future usage),
         (vs_train_data, invs_train_data, fine_tune_data, _, test_data, tokenizer) = \
         prepare_process_data.process_data(hparams, data_name=hparams['data_name'], data_role='tar', split_ratio=hparams['split_ratio'])
-        # assert len(vs_train_data) < 30000 and len(invs_train_data) < 30000
         train_data = vs_train_data
     elif hparams["divide_csv_train"]:
         # (invs_train_data -> T1 (D^{t}_{A->T} or D^{t}_{A->S}), vs_train_data -> T2 (D^{t}_{T->M}))
@@ -356,17 +359,7 @@ if __name__ == "__main__":
 
 
         ## Step 4.1 infer the semantics for seleted auxiliary dataset and ## Step 4.2 save the synthetic semantics
-        # Test on the SLURP dataset
         id_to_file=None
-
-        # print("Creating id_to_file mapping...")
-        # id_to_file = {}
-        # df = pd.read_csv(nlu_hparams["csv_test"])
-        # for i in range(len(df)):
-        #     id_to_file[str(df.ID[i])] = df.wav[i].split("/")[-1]
-
-        # nlu_brain.hparams.wer_file = nlu_hparams["output_folder"] + "/wer_test_real.txt"
-        # nlu_brain.set_hparams(hparams, nlu_hparams)
 
         print('start infer synthetic labels')
         prepare_aux_text_embedding.delete_file(syn_save_file)
@@ -542,10 +535,6 @@ if __name__ == "__main__":
             test_loader_kwargs=hparams["dataloader_opts"]
         )
         print('finished gb test and save res at, ', os.path.join(hparams["filter_res_by_text_similary_dir"], hparams["gb_infer_res"]))
-
-    ### 7. finetune S4 by T3 data (future work)
-
-    ### 8. evaluate S4 (future work)
 
     print('Cross-Modal Selective Self-Training (CMSST) Finished!')
 

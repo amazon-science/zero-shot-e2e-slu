@@ -1,4 +1,3 @@
-import torch
 import speechbrain as sb
 
 
@@ -81,25 +80,7 @@ def dataio_prepare(hparams, data_role):
     def id_pipeline(ID):
         return ID
 
-    # sb.dataio.dataset.add_dynamic_item(datasets, id_pipeline) # cal audio signal
 
-    # 3. Define text-semantics pipeline:
-    # @sb.utils.data_pipeline.takes("semantics")
-    # @sb.utils.data_pipeline.provides(
-    #     "semantics", "token_list", "tokens_bos", "tokens_eos", "tokens"
-    # )
-    # def text_pipeline(semantics):
-    #     yield semantics
-    #     tokens_list = tokenizer.encode_as_ids(semantics)
-    #     yield tokens_list
-    #     tokens_bos = torch.LongTensor([hparams[role_prefix+"bos_index"]] + (tokens_list))
-    #     yield tokens_bos
-    #     tokens_eos = torch.LongTensor(tokens_list + [hparams[role_prefix+"eos_index"]])
-    #     yield tokens_eos
-    #     tokens = torch.LongTensor(tokens_list)
-    #     yield tokens
-
-    # sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
 
     # 4. Define text-transcript pipeline:
     @sb.utils.data_pipeline.takes("transcript")

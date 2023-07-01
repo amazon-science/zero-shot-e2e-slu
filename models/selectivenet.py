@@ -126,11 +126,7 @@ class SpeechBrain_CrossModalSelectiveNet(torch.nn.Module):
             com_fea_dim: the dimensions of common space
         """
         super(SpeechBrain_CrossModalSelectiveNet, self).__init__()
-        # self.slu = slu
-        # self.nlu = nlu
 
-        # for parms in self.slu.parameters():
-        #     parms.require_grad = False
 
         self.dropout = torch.nn.Dropout(dropout_rate)
         self.sel_audio_projector = torch.nn.Linear(audio_fea_dim, com_fea_dim)
@@ -143,7 +139,6 @@ class SpeechBrain_CrossModalSelectiveNet(torch.nn.Module):
             self.selector = torch.nn.Sequential(
             torch.nn.Linear(2 * com_fea_dim, 2 * com_fea_dim),
             torch.nn.ReLU(True),
-            # torch.nn.BatchNorm1d(2 * com_fea_dim),
             torch.nn.Linear(2 * com_fea_dim, 1),
             torch.nn.Sigmoid()
             )
@@ -157,8 +152,7 @@ class SpeechBrain_CrossModalSelectiveNet(torch.nn.Module):
             )
 
     def forward(self, audio_fea, text_fea):
-        # audio_fea = self.slu.enc(audio)
-        # text_fea = self.nlu.enc(text)
+
 
         sel_prj_audio_fea = self.sel_audio_projector(self.dropout(audio_fea))
         sel_prj_text_fea = self.sel_text_projector(self.dropout(text_fea))
@@ -166,28 +160,9 @@ class SpeechBrain_CrossModalSelectiveNet(torch.nn.Module):
         aux_prj_audio_fea = self.sel_audio_projector(self.dropout(audio_fea))
         aux_prj_text_fea = self.sel_text_projector(self.dropout(text_fea))
 
-        # print(sel_prj_text_fea.shape)
-        # print(sel_prj_audio_fea.shape)
-        # print(torch.cat((sel_prj_text_fea, sel_prj_audio_fea), dim=1).shape)
         sel_score = self.selector(
             torch.cat((sel_prj_text_fea, sel_prj_audio_fea), dim=1))  # can use the audio_fea & text_fea
 
 
         return sel_prj_audio_fea, sel_prj_text_fea, aux_prj_audio_fea, aux_prj_text_fea, sel_score
 
-
-
-
-
-
-# if __name__ == '__main__':
-#     import os
-#     import sys
-#
-#     base = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../')
-#     sys.path.append(base)
-#
-#     from selectivenet.vgg_variant import vgg16_variant
-#
-#     features = vgg16_variant(32, 0.3).cuda()
-#     model = SelectiveNet(features, 512, 10).cuda()

@@ -1,0 +1,10 @@
+ID,duration,wav,semantics,transcript
+0,0.7679375,slurp_real/audio-1501754435.flac,{'scenario': 'calendar'| 'action': 'set'| 'entities': []},event
+1,1.664,slurp_real/audio-1501407267-headset.flac,{'scenario': 'calendar'| 'action': 'set'| 'entities': []},event
+2,1.880875,slurp_real/audio-1501407267.flac,{'scenario': 'calendar'| 'action': 'set'| 'entities': []},event
+3,1.92,slurp_real/audio-1501771798-headset.flac,{'scenario': 'calendar'| 'action': 'set'| 'entities': []},event
+4,1.91975,slurp_real/audio-1501771798.flac,{'scenario': 'calendar'| 'action': 'set'| 'entities': []},event
+5,1.472,slurp_real/audio-1490705711-headset.flac,{'scenario': 'calendar'| 'action': 'set'| 'entities': []},event
+6,1.4718125,slurp_real/audio-1490705711.flac,{'scenario': 'calendar'| 'action': 'set'| 'entities': []},event
+7,0.576,slurp_real/audio-1494416970-headset.flac,{'scenario': 'calendar'| 'action': 'set'| 'entities': []},event
+8,0.6399375,slurp_real/audio-1494416970.flac,{'scenario': 'calendar'| 'action': 'set'| 'entities': []},event

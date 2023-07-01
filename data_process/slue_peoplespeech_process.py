@@ -103,11 +103,7 @@ def dataio_prepare(hparams, data_role):
     @sb.utils.data_pipeline.provides("text")
     def transcript_pipeline(text):
         yield text
-        # transcript_tokens_list = asr_tokenizer.encode_as_ids(transcript)
-        # transcript_tokens = torch.LongTensor(transcript_tokens_list)
-        # yield transcript_tokens
 
-    # sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
 
     # 4. Set output:
     sb.dataio.dataset.set_output_keys(

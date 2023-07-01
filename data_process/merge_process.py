@@ -97,13 +97,7 @@ def dataio_prepare(hparams, data_role, mode="select_aux_sample", nlu_hparams=Non
     if mode == "train_nlu":
         sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
 
-    # 2. Define id pipeline: # unnecessary
-    # @sb.utils.data_pipeline.takes("ID")
-    # @sb.utils.data_pipeline.provides("ID")
-    # def id_pipeline(ID):
-    #     return ID
 
-    # sb.dataio.dataset.add_dynamic_item(datasets, id_pipeline) # cal audio signal
 
     # 3. Define text-semantics pipeline:
     @sb.utils.data_pipeline.takes("semantics")
@@ -131,17 +125,6 @@ def dataio_prepare(hparams, data_role, mode="select_aux_sample", nlu_hparams=Non
 
     if mode == "train_asu":
         sb.dataio.dataset.add_dynamic_item(datasets, semantics_pipeline)
-
-    # # 4. Define text-transcript pipeline:
-    # @sb.utils.data_pipeline.takes("text")
-    # @sb.utils.data_pipeline.provides("text")
-    # def transcript_pipeline(text):
-    #     yield text
-        # transcript_tokens_list = asr_tokenizer.encode_as_ids(transcript)
-        # transcript_tokens = torch.LongTensor(transcript_tokens_list)
-        # yield transcript_tokens
-
-    # sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
 
     # 4. Set output:
     if mode == "select_aux_sample":
@@ -236,29 +219,7 @@ def dataio_prepare_text_match(hparams, target_name1, data_role):
 
     sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
 
-    # if mode == "train_asu":
-    #     sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline) # cal audio signal
 
-    # @sb.utils.data_pipeline.takes("text")
-    # @sb.utils.data_pipeline.provides("transcript", "transcript_tokens")
-    # def transcript_pipeline(text):
-    #     text = text.upper()
-    #     transcript = text
-    #     yield transcript
-    #     transcript_tokens_list = asr_tokenizer.encode_as_ids(text)
-    #     transcript_tokens = torch.LongTensor(transcript_tokens_list)
-    #     yield transcript_tokens
-
-
-    # sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
-
-    # 2. Define id pipeline: # unnecessary
-    # @sb.utils.data_pipeline.takes("ID")
-    # @sb.utils.data_pipeline.provides("ID")
-    # def id_pipeline(ID):
-    #     return ID
-
-    # sb.dataio.dataset.add_dynamic_item(datasets, id_pipeline) # cal audio signal
 
 
     sb.dataio.dataset.set_output_keys(
@@ -335,18 +296,6 @@ def dataio_prepare_nlu(hparams, tar_name1, data_role, nlu_hparams=None):
         sig = sb.dataio.dataio.read_audio(path)
         return sig
 
-    # if mode == "train_asu":
-    #     sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline) # cal audio signal
-
-    # @sb.utils.data_pipeline.takes("transcript")
-    # @sb.utils.data_pipeline.provides("transcript", "transcript_tokens")
-    # def transcript_pipeline(transcript):
-    #     transcript = transcript.upper()
-    #     yield transcript
-    #     transcript_tokens_list = asr_tokenizer.encode_as_ids(transcript)
-    #     transcript_tokens = torch.LongTensor(transcript_tokens_list)
-    #     yield transcript_tokens
-    # sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
 
     # 2. Define input pipeline:
     @sb.utils.data_pipeline.takes("transcript")
@@ -383,52 +332,6 @@ def dataio_prepare_nlu(hparams, tar_name1, data_role, nlu_hparams=None):
     else:
         sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
 
-    # 2. Define id pipeline: # unnecessary
-    # @sb.utils.data_pipeline.takes("ID")
-    # @sb.utils.data_pipeline.provides("ID")
-    # def id_pipeline(ID):
-    #     return ID
-
-    # sb.dataio.dataset.add_dynamic_item(datasets, id_pipeline) # cal audio signal
-
-    # only can be used in asu
-    # # 3. Define text-semantics pipeline:
-    # @sb.utils.data_pipeline.takes("semantics")
-    # @sb.utils.data_pipeline.provides(
-    #     "semantics",
-    #     "semantics_token_list",
-    #     "semantics_tokens_bos",
-    #     "semantics_tokens_eos",
-    #     "semantics_tokens",
-    # )
-    # def semantics_pipeline(semantics):
-    #     yield semantics
-    #     semantics_tokens_list = slu_tokenizer.encode_as_ids(semantics)
-    #     yield semantics_tokens_list
-    #     semantics_tokens_bos = torch.LongTensor(
-    #         [hparams["bos_index"]] + (semantics_tokens_list)
-    #     )
-    #     yield semantics_tokens_bos
-    #     semantics_tokens_eos = torch.LongTensor(
-    #         semantics_tokens_list + [hparams["eos_index"]]
-    #     )
-    #     yield semantics_tokens_eos
-    #     semantics_tokens = torch.LongTensor(semantics_tokens_list)
-    #     yield semantics_tokens
-
-    # if mode == "train_asu":
-    #     sb.dataio.dataset.add_dynamic_item(datasets, semantics_pipeline)
-
-    # # 4. Define text-transcript pipeline:
-    # @sb.utils.data_pipeline.takes("text")
-    # @sb.utils.data_pipeline.provides("text")
-    # def transcript_pipeline(text):
-    #     yield text
-        # transcript_tokens_list = asr_tokenizer.encode_as_ids(transcript)
-        # transcript_tokens = torch.LongTensor(transcript_tokens_list)
-        # yield transcript_tokens
-
-    # sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
 
     if hparams['use_nlu_bert_enc']:
         sb.dataio.dataset.set_output_keys(
@@ -501,12 +404,6 @@ def dataio_prepare_asu_lc(hparams, target_name1, target_name2, target_name3, dat
     except:
         pass
 
-    # used for testing the performance of whole system on the original data
-    # gb_test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-    #     csv_path=hparams["csv_test"], replacements={"data_root": data_folder},
-    # )
-    # gb_test_data = gb_test_data.filtered_sorted(sort_key="duration")
-
 
     datasets = [train_data, valid_data, lc_test_data]
 
@@ -538,7 +435,7 @@ def dataio_prepare_asu_lc(hparams, target_name1, target_name2, target_name3, dat
             path = hparams['slue_voxpoluli_folder'] + '/' + wav + file_end
         sig = sb.dataio.dataio.read_audio(path)
 
-        ### only used for extreme/random case in multi-view sample filter (random filter)
+        ### only used for extreme/random case in multi-view sample filter (random filter), where the very long audio might be selected
         # print('sig shape: ', sig.shape)
         # set_max_audio_length = 450000
         # if sig.shape[0] > set_max_audio_length:
@@ -565,18 +462,6 @@ def dataio_prepare_asu_lc(hparams, target_name1, target_name2, target_name3, dat
 
     sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
 
-    # # # 4. Define text-transcript pipeline:
-    # @sb.utils.data_pipeline.takes("transcript")
-    # @sb.utils.data_pipeline.provides("transcript", "transcript_tokens")
-    # def transcript_pipeline(transcript):
-    #     transcript = transcript.upper()
-    #     yield transcript
-    #     transcript_tokens_list = asr_tokenizer.encode_as_ids(transcript)
-    #     transcript_tokens = torch.LongTensor(transcript_tokens_list)
-    #     # print("transcript_tokens is in shape of ", transcript_tokens.shape)
-    #     yield transcript_tokens
-    #
-    # sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
 
     # 2. Define input pipeline:
     @sb.utils.data_pipeline.takes("transcript")
@@ -626,13 +511,6 @@ def dataio_prepare_asu_lc(hparams, target_name1, target_name2, target_name3, dat
             ["id", "sig", "semantics", "tokens_bos", "tokens_eos", "tokens", "transcript", "transcript_tokens"],
         )
 
-
-    # # 4. Set output:
-    # sb.dataio.dataset.set_output_keys(
-    #     datasets,
-    #     ["id", "sig", "semantics", "tokens_bos", "tokens_eos", "tokens", "transcript", "transcript_tokens"],
-    # )
-
     return train_data, valid_data, lc_test_data, tokenizer, asr_tokenizer
 
 
@@ -651,12 +529,6 @@ def dataio_prepare_asu_gb(hparams, tar_name1, data_role=None):
         gb_test_data = gb_test_data.filtered_sorted(sort_key="duration")
     except:
         pass
-
-    # used for testing the performance of whole system on the original data
-    # gb_test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-    #     csv_path=hparams["csv_test"], replacements={"data_root": data_folder},
-    # )
-    # gb_test_data = gb_test_data.filtered_sorted(sort_key="duration")
 
 
     datasets = [gb_test_data]
@@ -695,17 +567,6 @@ def dataio_prepare_asu_gb(hparams, tar_name1, data_role=None):
         yield tokens
 
     sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
-
-    # # 4. Define text-transcript pipeline:
-    # @sb.utils.data_pipeline.takes("transcript")
-    # @sb.utils.data_pipeline.provides("transcript", "transcript_tokens")
-    # def transcript_pipeline(transcript):
-    #     yield transcript
-    #     # transcript_tokens_list = asr_tokenizer.encode_as_ids(transcript)
-    #     # transcript_tokens = torch.LongTensor(transcript_tokens_list)
-    #     # yield transcript_tokens
-    #
-    # sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
 
     # 4. Set output:
     sb.dataio.dataset.set_output_keys(

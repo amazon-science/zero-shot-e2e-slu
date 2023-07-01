@@ -175,4 +175,4 @@ dependencies:
     - xxhash==3.0.0
     - yamllint==1.23.0
     - yarl==1.7.2
-prefix: /home/jfhe/anaconda3/envs/speechbrain4
+prefix: /home/anonymity/anaconda3/envs/speechbrain4

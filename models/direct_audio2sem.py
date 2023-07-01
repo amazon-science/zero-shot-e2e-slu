@@ -63,15 +63,6 @@ class SLU(sb.Brain):
         logits = self.hparams.seq_lin(h)   # logits: torch.Size([4, 147, 58])
         p_seq = self.hparams.log_softmax(logits) # torch.Size([4, 147, 58]) p_seq:
 
-        # below is only for debug
-        # wav2vec2_out2 = self.modules.wav2vec2(wavs)
-        # time1 = time.time()
-        # p_tokens, scores = self.hparams.beam_searcher(
-        #     wav2vec2_out2.detach(), wav_lens
-        # )
-        # time2 = time.time()
-        # print('beam_search uses, ', (time2 - time1))
-        # above is only for debug
 
         # Compute outputs
         if (
@@ -112,15 +103,7 @@ class SLU(sb.Brain):
         if (stage != sb.Stage.TRAIN) or (
             self.batch_count % show_results_every == 0
         ):
-            # Decode token terms to words
-            # print("self.tokenizer is, ", self.tokenizer)
 
-            # predicted_semantics = [
-            #     self.tokenizer.decode_ids(utt_seq).split(" ")  # add self.
-            #     for utt_seq in predicted_tokens
-            # ]
-
-            # below is self-write
             predicted_semantics = []
             for utt_seq in predicted_tokens:
                 try:
@@ -131,7 +114,6 @@ class SLU(sb.Brain):
 
             target_semantics = [wrd.split(" ") for wrd in batch.semantics]
 
-            # self.log_outputs(predicted_semantics, target_semantics) # can be commented
 
             if stage != sb.Stage.TRAIN:
                 self.wer_metric.append(
@@ -194,11 +176,7 @@ class SLU(sb.Brain):
         if (stage != sb.Stage.TRAIN) or (
             self.batch_count % show_results_every == 0
         ):
-            # Decode token terms to words
-            # predicted_semantics = [
-            #     self.tokenizer.decode_ids(utt_seq).split(" ")  # add self.
-            #     for utt_seq in predicted_tokens
-            # ]
+
 
             # below is self-write
             predicted_semantics = []
@@ -220,11 +198,9 @@ class SLU(sb.Brain):
                     ids, predicted_semantics, target_semantics
                 )
 
-            # if stage == sb.Stage.TEST:
-                # write to "predictions.jsonl"
+
             with jsonlines.open(
                 os.path.join(save_path, save_name), mode="a"
-                # self.hparams["output_folder"] + "/gb_predictions.jsonl", mode="a"
             ) as writer:
                 for i in range(len(predicted_semantics)):
                     try:
@@ -273,13 +249,7 @@ class SLU(sb.Brain):
         if (stage != sb.Stage.TRAIN) or (
             self.batch_count % show_results_every == 0
         ):
-            # Decode token terms to words
-            # predicted_semantics = [
-            #     self.tokenizer.decode_ids(utt_seq).split(" ")  # add self.
-            #     for utt_seq in predicted_tokens
-            # ]
 
-            # below is self-write
             predicted_semantics = []
             for utt_seq in predicted_tokens:
                 try:
@@ -314,18 +284,6 @@ class SLU(sb.Brain):
                         # )
                     _dict = {}
                     _dict['entities'] = " ".join(predicted_semantics[i]).replace("|", ",")
-                        # if not isinstance(_dict, dict):
-                        #     _dict = {
-                        #         "scenario": "none",
-                        #         "action": "none",
-                        #         "entities": [],
-                        #     }
-                    # except SyntaxError:  # need this if the output is not a valid dictionary
-                    #     _dict = {
-                    #         "scenario": "none",
-                    #         "action": "none",
-                    #         "entities": [],
-                    #     }
                     _dict["ID"] = ids[i]
                     writer.write(_dict)
 

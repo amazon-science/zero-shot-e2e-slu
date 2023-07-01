@@ -219,11 +219,8 @@ def dataio_prepare_ratio(hparams, data_role, split_ratio):
     def transcript_pipeline(transcript):
         transcript = transcript.upper()
         yield transcript
-        # transcript_tokens_list = asr_tokenizer.encode_as_ids(transcript)
-        # transcript_tokens = torch.LongTensor(transcript_tokens_list)
-        # yield transcript_tokens
 
-    # sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
+
 
     # 4. Set output:
     sb.dataio.dataset.set_output_keys(
@@ -241,9 +238,6 @@ def dataio_prepare_ratio(hparams, data_role, split_ratio):
 def dataio_prepare_nlu(hparams, train_csv, dev_csv, test_csv):
     """This function prepares the datasets to be used in the brain class.
     It also defines the data processing pipeline through user-defined functions."""
-    # if split_ratio == None:
-    #     print('the split_ratio setting is wrong')
-    #     raise ValueError
     role_prefix = ""
     # if data_role == 'aux':
     #     role_prefix = "aux_"
@@ -282,18 +276,6 @@ def dataio_prepare_nlu(hparams, train_csv, dev_csv, test_csv):
         asr_tokenizer = hparams["asr_tokenizer"] # the "hparams" is actually "nlu_hparams" in the code using dataio_prepare_nlu
     slu_tokenizer = hparams["slu_tokenizer"]
 
-
-    # # 2. Define input pipeline:
-    # @sb.utils.data_pipeline.takes("transcript")
-    # @sb.utils.data_pipeline.provides("transcript", "transcript_tokens")
-    # def transcript_pipeline(transcript):
-    #     transcript = transcript.upper()
-    #     yield transcript
-    #     transcript_tokens_list = asr_tokenizer.encode_as_ids(transcript)
-    #     transcript_tokens = torch.LongTensor(transcript_tokens_list)
-    #     # print("transcript_tokens is in shape of ", transcript_tokens.shape)
-    #     yield transcript_tokens
-    # sb.dataio.dataset.add_dynamic_item(datasets, transcript_pipeline)
 
     # 2. Define input pipeline:
     @sb.utils.data_pipeline.takes("transcript")
@@ -357,19 +339,7 @@ def dataio_prepare_nlu(hparams, train_csv, dev_csv, test_csv):
 
     sb.dataio.dataset.add_dynamic_item(datasets, semantics_pipeline)
 
-    # # 4. Set output:
-    # sb.dataio.dataset.set_output_keys(
-    #     datasets,
-    #     [
-    #         "id",
-    #         "transcript",
-    #         "transcript_tokens",
-    #         "semantics",
-    #         "semantics_tokens_bos",
-    #         "semantics_tokens_eos",
-    #         "semantics_tokens",
-    #     ],
-    # )
+
 
     # 4. Set output:
     if hparams['use_nlu_bert_enc']:

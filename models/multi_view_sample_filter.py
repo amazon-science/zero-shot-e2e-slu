@@ -51,9 +51,7 @@ class MultiViewSampleFilter(object):
 
     def check_data(self, id_str_list1, id_str_list2):
         assert len(id_str_list1) == len(id_str_list2)
-        # set1 = set(id_str_list1)
-        # set2 = set(id_str_list2)
-        # assert len(set1) == len(set2)
+
         id_int_list1 = [int(ele) for ele in id_str_list1]
         id_int_list2 = [int(ele) for ele in id_str_list2]
         id_int_arr1 = np.array(id_int_list1).sort()
@@ -131,21 +129,18 @@ class MultiViewSampleFilter(object):
                 raise ValueError
 
             ## process cluster results
-            # rel_score = np.ones((data_num,)) * -1
-            # represent_vec_best = np.ones((len(label_list),), np.int32) * -1
             each_cluster_index = []
             cluster_mean_list = []
+
             for i in label_list:
                 mid_loc = np.where(label_array == i)
                 mid_loc = mid_loc[0]
                 mid_vectors = sample_sentence_arrays[mid_loc]
                 mid_cluster_mean = mid_vectors.mean(axis=0)
                 cluster_mean_list.append(mid_cluster_mean)
-
                 mid_cluster_index = mid_loc
-
                 each_cluster_index.append(mid_cluster_index)
-                # rel_score[mid_loc] = distance.cosine(mid_cluster_mean, sample_sentence_arrays[mid_loc])
+
             cluster_mean_array = np.array(cluster_mean_list)
             cluster_res = []
             cluster_res.append(label_array)
@@ -174,8 +169,6 @@ class MultiViewSampleFilter(object):
         self.multi_view_cluster_mean_array = cluster_mean_array
         return (
             label_array,
-            # rel_score,
-            # represent_vec_best,
             each_cluster_index,
             sample_dataset_ids,
             cluster_mean_array
@@ -286,16 +279,12 @@ class MultiViewSampleFilter(object):
         chose_text2transcript_cluster_id = {}
         chose_adu2wav_cluster_id = {}
         chose_text2sem_cluster_id = {}
-        # chose_text2transcript_cluster_id = []
-        # chose_adu2wav_cluster_id = []
-        # chose_text2sem_cluster_id = []
+
         for ele in chose_id:
             chose_text2transcript_cluster_id[str(ele)] = self.ini_res_dict['text2transcript_cluster_id'][str(ele)]
             chose_adu2wav_cluster_id[str(ele)] = self.ini_res_dict['aud2wav_cluster_id'][str(ele)]
             chose_text2sem_cluster_id[str(ele)] = self.ini_res_dict['text2sem_cluster_id'][str(ele)]
-            # chose_text2transcript_cluster_id.append(self.ini_res_dict['text2transcript_cluster_id'][str(ele)])
-            # chose_adu2wav_cluster_id.append(self.ini_res_dict['aud2wav_cluster_id'][str(ele)])
-            # chose_text2sem_cluster_id.append(self.ini_res_dict['text2sem_cluster_id'][str(ele)])
+
 
         self.chose_id = chose_id
         self.chose_text2transcript_cluster_id = chose_text2transcript_cluster_id

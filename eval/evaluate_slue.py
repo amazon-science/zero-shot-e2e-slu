@@ -123,12 +123,6 @@ if __name__ == "__main__":
 
             # below is added by a person
             flag = False
-            # if "scenario" not in pred_example.keys():
-            #     flag = True
-            #     pred_example["scenario"] = 'None'
-            # if "action" not in pred_example.keys():
-            #     flag = True
-            #     pred_example["action"] = 'None'
             if "entities" not in pred_example.keys():
                 flag = True
                 pred_example["entities"] = [{'type': 'None', 'filler': 'None'}]
@@ -139,10 +133,6 @@ if __name__ == "__main__":
 
             # above is added by a person
 
-            # scenario_f1(gold_example["scenario"], pred_example["scenario"])
-            # action_f1(gold_example["action"], pred_example["action"])
-            # intent_f1("{}_{}".format(gold_example["scenario"], gold_example["action"]),
-            #           "{}_{}".format(pred_example["scenario"], pred_example["action"]))
             span_f1(gold_example["entities"], pred_example["entities"])
             for distance, metric in distance_metrics.items():
                 metric(gold_example["entities"], pred_example["entities"])
@@ -150,26 +140,7 @@ if __name__ == "__main__":
     bar.finish()
 
     logger.info("Results:")
-    # results = scenario_f1.get_metric()
-    # print(format_results(results=results,
-    #                      label="scenario",
-    #                      full=args.full,
-    #                      errors=args.errors,
-    #                      table_layout=args.table_layout), "\n")
-    #
-    # results = action_f1.get_metric()
-    # print(format_results(results=results,
-    #                      label="action",
-    #                      full=args.full,
-    #                      errors=args.errors,
-    #                      table_layout=args.table_layout), "\n")
 
-    # results = intent_f1.get_metric()
-    # print(format_results(results=results,
-    #                      label="intent (scen_act)",
-    #                      full=args.full,
-    #                      errors=args.errors,
-    #                      table_layout=args.table_layout), "\n")
 
     results = span_f1.get_metric()
     print(format_results(results=results,

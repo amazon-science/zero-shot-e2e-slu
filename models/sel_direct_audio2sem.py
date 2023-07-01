@@ -15,6 +15,7 @@ Authors
 For more wav2vec2/HuBERT results, please see https://arxiv.org/pdf/2111.02735.pdf
 """
 
+
 import speechbrain as sb
 
 import jsonlines
@@ -74,13 +75,9 @@ class SLU(direct_SLU):
             for sub_id in batch.id:
                 transcript_fea.append(nlu[str(sub_id)])
             transcript_fea = torch.cat(transcript_fea, dim=0).cuda()
-        # transcript_tokens, transcript_tokens_lens = batch.transcript_tokens
-        # embedded_transcripts = nlu.hparams.input_emb(transcript_tokens)
-        # transcript_encoder_out = nlu.hparams.slu_enc(embedded_transcripts)   # called as slu_enc, but it actually is the nlu enc
-        # transcript_fea = transcript_encoder_out[:, -1, :] # it is LSTM, so it is -1
+
 
             audio_fea = wav2vec2_out[:, 0, :]
-            # print(audio_fa.shape)
 
             ### Cross-Model SelectiveNet forward pass
             sel_prj_audio_fea, sel_prj_text_fea, aux_prj_audio_fea, aux_prj_text_fea, sel_score\
@@ -95,15 +92,6 @@ class SLU(direct_SLU):
         logits = self.hparams.seq_lin(h)   # logits: torch.Size([4, 147, 58])
         p_seq = self.hparams.log_softmax(logits) # torch.Size([4, 147, 58]) p_seq:
 
-        # below is only for debug
-        # wav2vec2_out2 = self.modules.wav2vec2(wavs)
-        # time1 = time.time()
-        # p_tokens, scores = self.hparams.beam_searcher(
-        #     wav2vec2_out2.detach(), wav_lens
-        # )
-        # time2 = time.time()
-        # print('beam_search uses, ', (time2 - time1))
-        # above is only for debug
 
         # Compute outputs
         if (
@@ -172,24 +160,10 @@ class SLU(direct_SLU):
                 loss_aux_cm * self.hparams.selnet_aux_cm_weight + loss_sel_penulty.sum() * self.hparams.selnet_sel_penality_weight
 
             loss = selective_loss + (loss_seq * sel_score.view(-1)).mean() / (emprical_coverage + 0.01) * self.hparams.selnet_sel_cm_weight + loss_seq.mean()
-            # if self.hparams.epoch_counter.current > 1:
-            #     loss = selective_loss + (loss_seq * sel_score.view(-1)).mean() + loss_seq.mean()
-            # else:
-            #     loss = loss_seq.mean()
+
 
         if (stage != sb.Stage.TRAIN):
-        # if (stage != sb.Stage.TRAIN) or (
-        #     self.batch_count % show_results_every == 0
-        # ):
-            # Decode token terms to words
-            # print("self.tokenizer is, ", self.tokenizer)
 
-            # predicted_semantics = [
-            #     self.tokenizer.decode_ids(utt_seq).split(" ")  # add self.
-            #     for utt_seq in predicted_tokens
-            # ]
-
-            # below is self-write
 
             predicted_semantics = []
             for utt_seq in predicted_tokens:
@@ -245,84 +219,6 @@ class SLU(direct_SLU):
 
         return loss
 
-    # def infer_objectives(self, predictions, batch, stage, save_path, save_name, id_to_file=None, show_results_every=100):
-    #     """Computes the loss (NLL) given predictions and targets."""
-    #
-    #     if (
-    #         stage == sb.Stage.TRAIN
-    #         and self.batch_count % show_results_every != 0
-    #     ):
-    #         p_seq, wav_lens = predictions
-    #     else:
-    #         p_seq, wav_lens, predicted_tokens = predictions
-    #
-    #     ids = batch.id
-    #     tokens_eos, tokens_eos_lens = batch.tokens_eos
-    #
-    #     loss_seq = self.hparams.seq_cost(
-    #         p_seq, tokens_eos, length=tokens_eos_lens
-    #     ) # NLL loss, not CTC loss
-    #
-    #     loss = loss_seq
-    #
-    #     if (stage != sb.Stage.TRAIN) or (
-    #         self.batch_count % show_results_every == 0
-    #     ):
-    #         # Decode token terms to words
-    #         # predicted_semantics = [
-    #         #     self.tokenizer.decode_ids(utt_seq).split(" ")  # add self.
-    #         #     for utt_seq in predicted_tokens
-    #         # ]
-    #
-    #         # below is self-write
-    #         predicted_semantics = []
-    #         for utt_seq in predicted_tokens:
-    #             try:
-    #                 predicted_semantics.append(self.tokenizer.decode_ids(utt_seq).split(" "))
-    #             except:
-    #                 predicted_semantics.append(self.tokenizer.decode_ids([0]).split(" "))
-    #
-    #         target_semantics = [wrd.split(" ") for wrd in batch.semantics]
-    #
-    #         # self.log_outputs(predicted_semantics, target_semantics) # can be commented
-    #
-    #         if stage != sb.Stage.TRAIN:
-    #             self.wer_metric.append(
-    #                 ids, predicted_semantics, target_semantics
-    #             )
-    #             self.cer_metric.append(
-    #                 ids, predicted_semantics, target_semantics
-    #             )
-    #
-    #         # if stage == sb.Stage.TEST:
-    #             # write to "predictions.jsonl"
-    #         with jsonlines.open(
-    #             os.path.join(save_path, save_name), mode="a"
-    #             # self.hparams["output_folder"] + "/gb_predictions.jsonl", mode="a"
-    #         ) as writer:
-    #             for i in range(len(predicted_semantics)):
-    #                 try:
-    #                     _dict = ast.literal_eval(
-    #                         " ".join(predicted_semantics[i]).replace(
-    #                             "|", ","
-    #                         )
-    #                     )
-    #                     if not isinstance(_dict, dict):
-    #                         _dict = {
-    #                             "scenario": "none",
-    #                             "action": "none",
-    #                             "entities": [],
-    #                         }
-    #                 except SyntaxError:  # need this if the output is not a valid dictionary
-    #                     _dict = {
-    #                         "scenario": "none",
-    #                         "action": "none",
-    #                         "entities": [],
-    #                     }
-    #                 _dict["file"] = id_to_file[ids[i]]
-    #                 writer.write(_dict)
-    #
-    #     return loss
 
     def debug_infer_objectives(self, predictions, batch, stage, save_path, save_name, id_to_file=None, show_results_every=100):
         """Computes the loss (NLL) given predictions and targets."""
@@ -348,11 +244,6 @@ class SLU(direct_SLU):
         if (stage != sb.Stage.TRAIN) or (
             self.batch_count % show_results_every == 0
         ):
-            # Decode token terms to words
-            # predicted_semantics = [
-            #     self.tokenizer.decode_ids(utt_seq).split(" ")  # add self.
-            #     for utt_seq in predicted_tokens
-            # ]
 
             # below is self-write
             predicted_semantics = []
@@ -374,45 +265,22 @@ class SLU(direct_SLU):
                     ids, predicted_semantics, target_semantics
                 )
 
-            # if stage == sb.Stage.TEST:
-                # write to "predictions.jsonl"
             with jsonlines.open(
                 os.path.join(save_path, save_name), mode="a"
                 # self.hparams["output_folder"] + "/gb_predictions.jsonl", mode="a"
             ) as writer:
                 for i in range(len(predicted_semantics)):
-                    # try:
-                        # _dict = ast.literal_eval(
-                        #     " ".join(predicted_semantics[i]).replace(
-                        #         "|", ","
-                        #     )
-                        # )
+
                     _dict = {}
                     _dict['entities'] = " ".join(predicted_semantics[i]).replace("|", ",")
-                        # if not isinstance(_dict, dict):
-                        #     _dict = {
-                        #         "scenario": "none",
-                        #         "action": "none",
-                        #         "entities": [],
-                        #     }
-                    # except SyntaxError:  # need this if the output is not a valid dictionary
-                    #     _dict = {
-                    #         "scenario": "none",
-                    #         "action": "none",
-                    #         "entities": [],
-                    #     }
                     _dict["ID"] = ids[i]
                     writer.write(_dict)
 
         return loss
 
 
-    # def log_outputs(self, predicted_semantics, target_semantics):
-    #     """ TODO: log these to a file instead of stdout """
-    #     for i in range(len(target_semantics)):
-    #         print(" ".join(predicted_semantics[i]).replace("|", ","))
-    #         print(" ".join(target_semantics[i]).replace("|", ","))
-    #         print("")
+
+
 
     def fit_batch(self, batch, nlu):
         """Train the parameters given a single batch in input"""
@@ -467,14 +335,7 @@ class SLU(direct_SLU):
         else:
             stage_stats["CER"] = self.cer_metric.summarize("error_rate")
             stage_stats["WER"] = self.wer_metric.summarize("error_rate")
-            # try:
-            #     stage_stats["CER"] = self.cer_metric.summarize("error_rate")
-            # except:
-            #     stage_stats["CER"] = 101.0
-            # try:
-            #     stage_stats["WER"] = self.wer_metric.summarize("error_rate")
-            # except:
-            #     stage_stats["WER"] = 101.0
+
 
         # Perform end-of-iteration things, like annealing, logging, etc.
         if stage == sb.Stage.VALID:
@@ -511,269 +372,6 @@ class SLU(direct_SLU):
             with open(self.hparams.wer_file, "w") as w:
                 self.wer_metric.write_stats(w)
 
-    # def init_optimizers(self):
-    #     "Initializes the wav2vec2 optimizer and model optimizer"   # initialize the optimizer with Adam optimizer for wav2vec2
-    #     self.wav2vec2_optimizer = self.hparams.wav2vec2_opt_class(
-    #         self.modules.wav2vec2.parameters()
-    #     )
-    #     self.optimizer = self.hparams.opt_class(self.hparams.model.parameters()) # initialize the optimizer with Adam optimizer for other parts in the modules
-    #
-    #     if self.checkpointer is not None:
-    #         self.checkpointer.add_recoverable(
-    #             "wav2vec2_opt", self.wav2vec2_optimizer
-    #         )
-    #         self.checkpointer.add_recoverable("optimizer", self.optimizer)
-
-
-    # def infer_objectives_loss(
-    #     self,
-    #     test_set,
-    #     save_path,
-    #     save_name,
-    #     id_to_file=None,
-    #     max_key=None,
-    #     min_key=None,
-    #     progressbar=None,
-    #     test_loader_kwargs={},
-    # ):
-    #     """Iterate test_set and evaluate brain performance. By default, loads
-    #     the best-performing checkpoint (as recorded using the checkpointer).
-    #
-    #     Arguments
-    #     ---------
-    #     test_set : Dataset, DataLoader
-    #         If a DataLoader is given, it is iterated directly. Otherwise passed
-    #         to ``self.make_dataloader()``.
-    #     max_key : str
-    #         Key to use for finding best checkpoint, passed to
-    #         ``on_evaluate_start()``.
-    #     min_key : str
-    #         Key to use for finding best checkpoint, passed to
-    #         ``on_evaluate_start()``.
-    #     progressbar : bool
-    #         Whether to display the progress in a progressbar.
-    #     test_loader_kwargs : dict
-    #         Kwargs passed to ``make_dataloader()`` if ``test_set`` is not a
-    #         DataLoader. NOTE: ``loader_kwargs["ckpt_prefix"]`` gets
-    #         automatically overwritten to ``None`` (so that the test DataLoader
-    #         is not added to the checkpointer).
-    #
-    #     Returns
-    #     -------
-    #     average test loss
-    #     """
-    #     if progressbar is None:
-    #         progressbar = not self.noprogressbar
-    #
-    #     if not (
-    #         isinstance(test_set, DataLoader)
-    #         or isinstance(test_set, LoopedLoader)
-    #     ):
-    #         test_loader_kwargs["ckpt_prefix"] = None
-    #         test_set = self.make_dataloader(
-    #             test_set, Stage.TEST, **test_loader_kwargs
-    #         )
-    #     self.on_evaluate_start(max_key=max_key, min_key=min_key)
-    #     self.on_stage_start(Stage.TEST, epoch=None)
-    #     self.modules.eval()
-    #     avg_test_loss = 0.0
-    #     with torch.no_grad():
-    #         for batch in tqdm(
-    #             test_set, dynamic_ncols=True, disable=not progressbar
-    #         ):
-    #             self.step += 1
-    #             loss = self.infer_batch(batch, stage=Stage.TEST, save_path=save_path, save_name=save_name, id_to_file=id_to_file)
-    #             avg_test_loss = self.update_average(loss, avg_test_loss)
-    #
-    #             # Debug mode only runs a few batches
-    #             if self.debug and self.step == self.debug_batches:
-    #                 break
-    #
-    #         # Only run evaluation "on_stage_end" on main process
-    #         run_on_main(
-    #             self.on_stage_end, args=[Stage.TEST, avg_test_loss, None]
-    #         )
-    #     self.step = 0
-    #     return avg_test_loss
-
-    # def fit(
-    #     self,
-    #     epoch_counter,
-    #     train_set,
-    #     valid_set=None,
-    #     progressbar=None,
-    #     nlu=None,
-    #     train_loader_kwargs={},
-    #     valid_loader_kwargs={},
-    # ):
-    #     """Iterate epochs and datasets to improve objective.
-    #
-    #     Relies on the existence of multiple functions that can (or should) be
-    #     overridden. The following methods are used and expected to have a
-    #     certain behavior:
-    #
-    #     * ``fit_batch()``
-    #     * ``evaluate_batch()``
-    #     * ``update_average()``
-    #
-    #     If the initialization was done with distributed_count > 0 and the
-    #     distributed_backend is ddp, this will generally handle multiprocess
-    #     logic, like splitting the training data into subsets for each device and
-    #     only saving a checkpoint on the main process.
-    #
-    #     Arguments
-    #     ---------
-    #     epoch_counter : iterable
-    #         Each call should return an integer indicating the epoch count.
-    #     train_set : Dataset, DataLoader
-    #         A set of data to use for training. If a Dataset is given, a
-    #         DataLoader is automatically created. If a DataLoader is given, it is
-    #         used directly.
-    #     valid_set : Dataset, DataLoader
-    #         A set of data to use for validation. If a Dataset is given, a
-    #         DataLoader is automatically created. If a DataLoader is given, it is
-    #         used directly.
-    #     train_loader_kwargs : dict
-    #         Kwargs passed to `make_dataloader()` for making the train_loader
-    #         (if train_set is a Dataset, not DataLoader).
-    #         E.G. batch_size, num_workers.
-    #         DataLoader kwargs are all valid.
-    #     valid_loader_kwargs : dict
-    #         Kwargs passed to `make_dataloader()` for making the valid_loader
-    #         (if valid_set is a Dataset, not DataLoader).
-    #         E.g., batch_size, num_workers.
-    #         DataLoader kwargs are all valid.
-    #     progressbar : bool
-    #         Whether to display the progress of each epoch in a progressbar.
-    #     """
-    #
-    #     if not (
-    #         isinstance(train_set, DataLoader)
-    #         or isinstance(train_set, LoopedLoader)
-    #     ):
-    #         train_set = self.make_dataloader(
-    #             train_set, stage=Stage.TRAIN, **train_loader_kwargs
-    #         )
-    #     if valid_set is not None and not (
-    #         isinstance(valid_set, DataLoader)
-    #         or isinstance(valid_set, LoopedLoader)
-    #     ):
-    #         valid_set = self.make_dataloader(
-    #             valid_set,
-    #             stage=Stage.VALID,
-    #             ckpt_prefix=None,
-    #             **valid_loader_kwargs,
-    #         )
-    #
-    #     if nlu==None:
-    #         raise ValueError('nlu model is not correct set')
-    #     # for params in nlu.parameters():
-    #     #     if params.require_grad != False:
-    #     #         raise ValueError('nlu model is not frozen')
-    #
-    #     self.on_fit_start() # resueme a nearest ckpt; file to the model # set optimizer
-    #
-    #     if progressbar is None:
-    #         progressbar = not self.noprogressbar
-    #
-    #     # Iterate epochs
-    #     for epoch in epoch_counter:
-    #         # Training stage
-    #         self.on_stage_start(Stage.TRAIN, epoch)
-    #         self.modules.train()
-    #
-    #         # Reset nonfinite count to 0 each epoch
-    #         self.nonfinite_count = 0
-    #
-    #         if self.train_sampler is not None and hasattr(
-    #             self.train_sampler, "set_epoch"
-    #         ):
-    #             self.train_sampler.set_epoch(epoch)
-    #
-    #         # Time since last intra-epoch checkpoint
-    #         last_ckpt_time = time.time()
-    #
-    #         # Only show progressbar if requested and main_process
-    #         enable = progressbar and sb.utils.distributed.if_main_process()
-    #         with tqdm(
-    #             train_set,
-    #             initial=self.step,
-    #             dynamic_ncols=True,
-    #             disable=not enable,
-    #         ) as t:
-    #             for batch in t:
-    #                 if self._optimizer_step_limit_exceeded:
-    #                     logger.info("Train iteration limit exceeded")
-    #                     break
-    #                 self.step += 1
-    #
-    #                 # wavs, wav_lens = batch.sig
-    #                 # print(wavs.shape)
-    #
-    #                 loss = self.fit_batch(batch, nlu)
-    #                 self.avg_train_loss = self.update_average(
-    #                     loss, self.avg_train_loss
-    #                 )
-    #                 t.set_postfix(train_loss=self.avg_train_loss)   #?
-    #
-    #                 # Debug mode only runs a few batches
-    #                 if self.debug and self.step == self.debug_batches:
-    #                     break
-    #
-    #                 if (
-    #                     self.checkpointer is not None
-    #                     and self.ckpt_interval_minutes > 0
-    #                     and time.time() - last_ckpt_time
-    #                     >= self.ckpt_interval_minutes * 60.0
-    #                 ):
-    #                     # This should not use run_on_main, because that
-    #                     # includes a DDP barrier. That eventually leads to a
-    #                     # crash when the processes'
-    #                     # time.time() - last_ckpt_time differ and some
-    #                     # processes enter this block while others don't,
-    #                     # missing the barrier.
-    #                     if sb.utils.distributed.if_main_process():
-    #                         self._save_intra_epoch_ckpt()
-    #                     last_ckpt_time = time.time()
-    #
-    #         # Run train "on_stage_end" on all processes
-    #         self.on_stage_end(Stage.TRAIN, self.avg_train_loss, epoch)
-    #         self.avg_train_loss = 0.0
-    #         self.step = 0
-    #
-    #         # Validation stage
-    #         if valid_set is not None:
-    #             self.on_stage_start(Stage.VALID, epoch)
-    #             self.modules.eval()
-    #             avg_valid_loss = 0.0
-    #             with torch.no_grad():
-    #                 for batch in tqdm(
-    #                     valid_set, dynamic_ncols=True, disable=not enable
-    #                 ):
-    #                     self.step += 1
-    #                     loss = self.evaluate_batch(batch, nlu, stage=Stage.VALID)
-    #                     avg_valid_loss = self.update_average(
-    #                         loss, avg_valid_loss
-    #                     )
-    #
-    #                     # Debug mode only runs a few batches
-    #                     if self.debug and self.step == self.debug_batches:
-    #                         break
-    #
-    #                 # Only run validation "on_stage_end" on main process
-    #                 self.step = 0
-    #                 run_on_main(
-    #                     self.on_stage_end,
-    #                     args=[Stage.VALID, avg_valid_loss, epoch],
-    #                 )
-    #
-    #         # Debug mode only runs a few epochs
-    #         if (
-    #             self.debug
-    #             and epoch == self.debug_epochs
-    #             or self._optimizer_step_limit_exceeded
-    #         ):
-    #             break
 
     def fit(
         self,

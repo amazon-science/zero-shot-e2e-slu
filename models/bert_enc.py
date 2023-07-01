@@ -32,16 +32,6 @@ class BertEnc(torch.nn.Module):
             torch.nn.Linear(self.target_feature_dim * 2, self.target_feature_dim)
         )
 
-    #     for p in self.robert_enc.parameters():
-    #         p.requires_grad = True
-    #
-    #     if freeze_bert_enc:
-    #         self.freeze_bert_enc_para()
-    #
-    # def freeze_bert_enc_para(self):
-    #     for p in self.robert_enc.parameters():
-    #         p.requires_grad = False
-
 
     def forward(self, encoded_input):
         if self.freeze_bert_enc:

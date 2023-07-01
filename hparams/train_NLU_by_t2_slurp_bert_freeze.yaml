@@ -1,12 +1,4 @@
-# ############################################################################
-# Model: Direct SLU
-# Encoder: Pre-trained ASR encoder -> LSTM
-# Decoder: GRU + beamsearch
-# Tokens: BPE with unigram
-# losses: NLL
-# Training: SLURP
-# Authors:  Loren Lugosch, Mirco Ravanelli 2020
-# ############################################################################
+
 
 # Seed needs to be set at top of yaml, before objects with parameters are made
 data_name: "slurp"
@@ -16,7 +8,7 @@ __set_seed: !apply:torch.manual_seed [!ref <seed>]
 
 train_nlu: True
 use_nlu_bert_enc: True
-project_folder: /home/jfhe/Documents/MountHe/jfhe/projects/speechbrain
+project_folder: /home/{path}/Documents/{path}/{path}/projects/speechbrain
 #subproject_folder: !ref <project_folder>/recipes/SLURP/Zero_shot_cross_modal # should revise accoridingly to the pre-trained model
 
 output_folder: ./pretrained_models/NLU/<data_name>/<seed>
